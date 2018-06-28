@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>YouTube "No-Algorithm" Subscriptions Feed </title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.1/css/bulma.min.css" />
+    <script defer src="https://use.fontawesome.com/releases/v5.1.0/js/all.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/2.3.0/mustache.min.js"></script>
+    
+    <script type="text/template" id="videos-template">
+        {{#.}}
+            <div class="column is-half-mobile is-one-third-tablet is-one-quarter-desktop is-one-fifth-widescreen is-2-fullhd">
+                <figure class="image image is-16by9" style="overflow: hidden;">
+                    <a href="https://www.youtube.com/watch?v={{videoID}}" target="_blank">
+                        <img src="{{ thumbnail }}" alt="Thumbnail" style="height: auto; margin-top: -9.3%;"></img>
+                    </a>
+                </figure>
+                <p class="has-text-weight-bold"><a href="https://www.youtube.com/watch?v={{videoID}}" target="_blank">{{ videoTitle }}</a></p>
+                <p>{{ channelTitle }}</p>
+                <p class="is-italic">{{#formatDate}}{{ publishedAt }}{{/formatDate}}</p>
+            </div>
+        {{/.}}
+    </script>
+</head>
+<body>
+    <section class="hero is-light is-fullheight pre-auth">
+        <div class="hero-body">
+            
+    <div class="container">
+      <h1 class="title">
+        This application requires access to your YouTube account.
+      </h1>
+      <h2 class="subtitle">
+        Please <a href="#" id="login-link" style="color: #3273dc; text-decoration: underline; font-weight: bold;">authorize</a> to continue.
+      </h2>
+    </div>
+    
+        </div>
+    </section>
+    <section class="section post-auth" style="display: none;">
+
+
+<p id="loadtext">Cargando canales... <span id="count-now">0</span>/<span id="count-total">0</span></p>
+<progress id="loading-channels" class="progress is-link" value="0" max="1">.</progress>
+
+<div id="videos" class="columns is-mobile is-multiline"></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script type="text/javascript">
+/* Authorizing requests START */
+var OAUTH2_CLIENT_ID = '258488226175-phkcbaam18ppesia6h4l95g71ftpc4j5.apps.googleusercontent.com';
+var OAUTH2_SCOPES = ['https://www.googleapis.com/auth/youtube'];
+googleApiClientReady = function() {
+  gapi.auth.init(function() {
+    window.setTimeout(checkAuth, 1);
+  });
+}
+function checkAuth() {
+  gapi.auth.authorize({
+    client_id: OAUTH2_CLIENT_ID,
+    scope: OAUTH2_SCOPES,
+    immediate: true
+  }, handleAuthResult);
+}
+function handleAuthResult(authResult) {
+  if (authResult && !authResult.error) {
+  $('.pre-auth').hide(); $('.post-auth').show();
+  loadAPIClientInterfaces();
+} else {
+  $('#login-link').click(function() {
+    gapi.auth.authorize({
+      client_id: OAUTH2_CLIENT_ID,
+      scope: OAUTH2_SCOPES,
+      immediate: false
+      }, handleAuthResult);
+  });
+}
+}
+/* Authorizing requests END */
+
+function loadAPIClientInterfaces() {
+  gapi.client.load('youtube', 'v3', function() {
+    console.log('Authorization Successfull');
+    handleAPILoaded();
+  });
+}
+
+var subscriptionsList;
+var channelsPlaylists = [];
+var latestVideos = new Array();
+
+var count_now = 0;
+var count_total = 0;
+
+function handleAPILoaded() { getSubscriptionsList(); }
+
+/*
+    First of all we need to get list of your or users subscriptions.
+    To get list of your subscription, keep "mine: true" uncommented
+    To get list of specific channel, keep "channelId: 'CHANNEL_ID'" uncommented
+    Keep in mind that you can get 50 subscriptions per requests
+*/
+
+function getSubscriptionsList(pageToken) {
+  gapi.client.youtube.subscriptions.list({
+    mine: true,
+    //channelId: 'CHANNEL_ID',
+    maxResults: 50,
+    part: 'snippet',
+    pageToken: pageToken
+  }).execute((response) => {
+      console.log(response);
+      count_total += response.items.length;
+      $('#count-total').html(count_total);
+      $('#loading-channels').attr('max', count_total);
+      
+      getSubscriptionsPlaylists(response);
+      if (response.nextPageToken) getSubscriptionsList(response.nextPageToken);
+  });
+}
+
+/*
+  Good, we got our desired subscriptions,
+  Now we need to get Playlist ID of each channel to get latest videos
+*/
+function getSubscriptionsPlaylists(subs) {
+  var subscriptions = subs.items;
+  $.each(subscriptions, function(key, subs) {
+    var channelID = this.snippet.resourceId.channelId;
+    gapi.client.youtube.channels.list({
+      id: channelID,
+      maxResults: 1,
+      part: 'contentDetails'
+    }).execute(getChannelVideos);
+  });
+}
+
+/*
+  Great, almost there!
+  Third step will be to get actuall videos from each of them
+*/
+
+function getChannelVideos(playlists) {
+  var playlistID = playlists.items[0].contentDetails.relatedPlaylists.uploads;
+  gapi.client.youtube.playlistItems.list({
+    part: 'snippet',
+    maxResults: 10, // 10 from each channel/playlist
+    playlistId: playlistID
+  }).execute(mergeSortVideo);
+}
+
+function mergeSortVideo(channelVideos) {
+  var videos = channelVideos.items;
+  var videosLen = videos.length;
+  $.each(videos, function(key, video) {
+    /*
+      We want to keep all our videos in one array.
+      Keep it mind it's not all information that you can get from video info.
+      Check: https://developers.google.com/youtube/v3/docs/playlistItems#resource to get more
+    */
+    var vi = this.snippet;
+    var videoInfo = {
+      channelTitle: vi.channelTitle,
+      videoTitle: vi.title,
+      videoDescription: vi.description,
+      videoID: vi.resourceId.videoId,
+      publishedAt: vi.publishedAt,
+      thumbnail: vi.thumbnails.high.url
+    }
+    latestVideos.push(videoInfo);
+
+    if (key == videosLen-1) {
+      /* Now when we have our array filled up with videos we want to sort it by date */
+      latestVideos.sort(function(a,b){
+        return new Date(b.publishedAt) - new Date(a.publishedAt);
+      });
+
+      /* That's it, you have your list of videos. */
+      render_videos();
+    }
+  });
+  
+  count_now++;
+  $('#count-now').html(count_now);
+  $('#loading-channels').attr('value', count_now);
+  
+  if (count_now == count_total) {
+      $('#loadtext').slideUp();
+      $('#loading-channels').slideUp();
+  }
+}
+
+</script>
+<script src="//apis.google.com/js/client.js?onload=googleApiClientReady"></script>
+<script type="text/javascript">
+  /* Just rendering your results on the page */
+  function render_videos() {
+    latestVideos.formatDate = function() {
+      return function(text, render) {
+        return moment(render(text), 'YYYY-MM-DDTHH:mm:ss.SSSZ').format('<b>MMM Do</b>, YYYY');
+      }
+    }
+
+    latestVideos.limitBody = function() {
+      return function(text, render) {
+
+        return render(text).substr(0,45) + '...';
+      }
+    };
+    $('#videos').html(Mustache.render($('#videos-template').html(), latestVideos));
+  }
+
+</script>
+
+    </div>
+</body>
+</html>
