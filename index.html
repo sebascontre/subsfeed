@@ -5,7 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>YouTube "No-Algorithm" Subscriptions Feed </title>
     
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-121609902-3"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){window.dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'UA-121609902-3');
+    </script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.1/css/bulma.min.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Rubik:400,700" />
+    <link rel="stylesheet" href="/style.css" />
+    
     <script defer src="https://use.fontawesome.com/releases/v5.1.0/js/all.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js"></script>
@@ -16,7 +27,7 @@
             <div class="column is-half-mobile is-one-third-tablet is-one-quarter-desktop is-one-fifth-widescreen is-2-fullhd">
                 <figure class="image image is-16by9" style="overflow: hidden;">
                     <a href="https://www.youtube.com/watch?v={{videoID}}" target="_blank">
-                        <img src="{{ thumbnail }}" alt="Thumbnail" style="height: auto; margin-top: -9.3%;"></img>
+                        <img src="{{ thumbnail }}" alt="Thumbnail" style="height: auto; margin-top: -9.4%;"></img>
                     </a>
                 </figure>
                 <p class="has-text-weight-bold"><a href="https://www.youtube.com/watch?v={{videoID}}" target="_blank">{{ videoTitle }}</a></p>
@@ -27,6 +38,14 @@
     </script>
 </head>
 <body>
+  <nav class="navbar" role="navigation" aria-label="main navigation">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="/">SubsFeed</a>
+      <p class="navbar-item">Algorithm-Free YouTube Subscriptions Feed</p>
+  </div>
+</nav>  
+  
+  
     <section class="hero is-light is-fullheight pre-auth">
         <div class="hero-body">
             
@@ -41,7 +60,17 @@
     
         </div>
     </section>
+    
+    <section class="section post-auth" style="display: none; background: gray">
+      <div class="container">
+        <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+        <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8039083170373087" data-ad-slot="1930234392" data-ad-format="auto"></ins>
+        <script> (window.adsbygoogle = window.adsbygoogle || []).push({}); </script>
+      </div>
+    </section>
+    
     <section class="section post-auth" style="display: none;">
+      <div class="container is-fluid">
 
 
 <p id="loadtext">Cargando canales... <span id="count-now">0</span>/<span id="count-total">0</span></p>
@@ -49,10 +78,8 @@
 
 <div id="videos" class="columns is-mobile is-multiline"></div>
 
-
-
-
-
+      </div>
+    </section>
 
 
 
@@ -160,7 +187,7 @@ function getChannelVideos(playlists) {
   var playlistID = playlists.items[0].contentDetails.relatedPlaylists.uploads;
   gapi.client.youtube.playlistItems.list({
     part: 'snippet',
-    maxResults: 10, // 10 from each channel/playlist
+    maxResults: 50, // 10 from each channel/playlist
     playlistId: playlistID
   }).execute(mergeSortVideo);
 }
@@ -192,7 +219,6 @@ function mergeSortVideo(channelVideos) {
       });
 
       /* That's it, you have your list of videos. */
-      render_videos();
     }
   });
   
@@ -203,6 +229,7 @@ function mergeSortVideo(channelVideos) {
   if (count_now == count_total) {
       $('#loadtext').slideUp();
       $('#loading-channels').slideUp();
+      render_videos();
   }
 }
 
@@ -227,7 +254,5 @@ function mergeSortVideo(channelVideos) {
   }
 
 </script>
-
-    </div>
 </body>
 </html>

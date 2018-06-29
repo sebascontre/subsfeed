@@ -1,0 +1,12 @@
+.navbar {
+    font-family: 'Rubik', sans-serif;
+}
+
+.navbar-brand a {
+    font-weight: bold;
+}
+
+.navbar-brand p {
+    font-size: small;
+    margin-left: -12px;
+}
